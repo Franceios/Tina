@@ -41,14 +41,19 @@ export default function AdminLoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] px-4 py-10 text-[var(--text)]">
-      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[var(--surface)] p-8 shadow-2xl shadow-black/20">
-        <div className="mb-8 text-center">
-          <p className="text-xs uppercase tracking-[0.35rem] text-[var(--accent)]">Admin access</p>
-          <h1 className="mt-4 text-3xl text-white">Tinnah Collections</h1>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] px-3 py-6 text-[var(--text)] sm:px-4 sm:py-10">
+      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[var(--surface)] p-5 shadow-2xl shadow-black/20 sm:p-8">
+        <div className="mb-6 text-center sm:mb-8">
+          <p className="text-[10px] uppercase tracking-[0.28rem] text-[var(--accent)] sm:text-xs">
+            Admin access
+          </p>
+          <h1 className="mt-3 text-2xl text-white sm:mt-4 sm:text-3xl">Tinnah Collections</h1>
+          <p className="mt-3 text-xs text-white/70 sm:text-sm">
+            Add the admin credentials for now. They will be changed later.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div>
             <label htmlFor="username" className="mb-2 block text-sm text-white/70">
               Username
@@ -57,7 +62,7 @@ export default function AdminLoginForm() {
               id="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none ring-0 transition focus:border-[var(--accent)]"
+              className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-base text-white outline-none ring-0 transition placeholder:text-white/35 focus:border-[var(--accent)]"
               placeholder="Admin"
             />
           </div>
@@ -71,7 +76,7 @@ export default function AdminLoginForm() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none transition focus:border-[var(--accent)]"
+              className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/35 focus:border-[var(--accent)]"
               placeholder="Enter password"
             />
           </div>
