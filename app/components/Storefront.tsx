@@ -18,6 +18,7 @@ type CartItem = Product & { quantity: number };
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80";
+const supportedCurrencies = ["USD", "EUR", "GBP", "AED", "SAR", "CAD", "AUD", "GHS"];
 
 export default function Storefront() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,12 +28,15 @@ export default function Storefront() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [currencyCode, setCurrencyCode] = useState("USD");
+  const [currencyRates, setCurrencyRates] = useState<Record<string, number>>({ USD: 1 });
 
-  const formatMoney = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
+  const formatMoney = (amount: number) => {
+    const rate = currencyRates[currencyCode] ?? 1;
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currencyCode,
-    }).format(amount);
+    }).format(amount * rate);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem("tinnah-cart");
@@ -44,8 +48,14 @@ export default function Storefront() {
       }
     }
 
+    const savedCurrency = localStorage.getItem("tinnah-currency");
+    if (savedCurrency) {
+      setCurrencyCode(savedCurrency);
+    }
+
     void fetchProducts();
     void fetchCurrency();
+    void fetchRates();
   }, []);
 
   useEffect(() => {
@@ -64,9 +74,30 @@ export default function Storefront() {
       const data = (await response.json()) as { currency?: string };
       if (data.currency) {
         setCurrencyCode(data.currency);
+        localStorage.setItem("tinnah-currency", data.currency);
       }
     } catch {
       setCurrencyCode("USD");
+    }
+  };
+
+  const fetchRates = async () => {
+    try {
+      const targets = supportedCurrencies.filter((item) => item !== "USD");
+      const response = await fetch(
+        `https://api.frankfurter.app/latest?from=USD&to=${targets.join(",")}`,
+      );
+      const data = (await response.json()) as { rates?: Record<string, number> };
+      if (!data.rates) {
+        return;
+      }
+
+      setCurrencyRates({
+        USD: 1,
+        ...data.rates,
+      });
+    } catch {
+      setCurrencyRates({ USD: 1, EUR: 0.92, GBP: 0.79, AED: 3.67, SAR: 3.75, CAD: 1.36, AUD: 1.5, GHS: 15.3 });
     }
   };
 
@@ -116,6 +147,22 @@ export default function Storefront() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  const updateCurrency = async (nextCurrency: string) => {
+    const selected = supportedCurrencies.includes(nextCurrency) ? nextCurrency : "USD";
+    setCurrencyCode(selected);
+    localStorage.setItem("tinnah-currency", selected);
+
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currency: selected }),
+      });
+    } catch {
+      // keep local selection if settings API is unavailable
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--bg)]/90 backdrop-blur-md">
@@ -156,6 +203,21 @@ export default function Storefront() {
                 </button>
               ))}
             </nav>
+
+            <label className="flex items-center gap-2 rounded-full border border-white/10 bg-[var(--surface)] px-3 py-2 text-xs text-white/80">
+              <span>Currency</span>
+              <select
+                value={currencyCode}
+                onChange={(event) => void updateCurrency(event.target.value)}
+                className="bg-transparent text-sm text-white outline-none"
+              >
+                {supportedCurrencies.map((option) => (
+                  <option key={option} value={option} className="bg-[#1d232b] text-white">
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <button
               type="button"

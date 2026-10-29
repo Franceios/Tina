@@ -33,7 +33,7 @@ const emptyForm: ProductForm = {
   sizes: "One Size",
 };
 
-const currencyOptions = ["USD", "EUR", "GBP", "AED", "SAR", "CAD", "AUD"];
+const currencyOptions = ["USD", "EUR", "GBP", "AED", "SAR", "CAD", "AUD", "GHS"];
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -41,6 +41,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currency, setCurrency] = useState("USD");
+  const [currencyRates, setCurrencyRates] = useState<Record<string, number>>({ USD: 1 });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
 
@@ -53,6 +54,7 @@ export default function AdminDashboard() {
 
     void loadProducts();
     void loadCurrency();
+    void loadRates();
   }, [router]);
 
   const loadCurrency = async () => {
@@ -64,6 +66,23 @@ export default function AdminDashboard() {
       }
     } catch {
       setCurrency("USD");
+    }
+  };
+
+  const loadRates = async () => {
+    try {
+      const targets = currencyOptions.filter((item) => item !== "USD");
+      const response = await fetch(
+        `https://api.frankfurter.app/latest?from=USD&to=${targets.join(",")}`,
+      );
+      const data = (await response.json()) as { rates?: Record<string, number> };
+      if (!data.rates) {
+        return;
+      }
+
+      setCurrencyRates({ USD: 1, ...data.rates });
+    } catch {
+      setCurrencyRates({ USD: 1, EUR: 0.92, GBP: 0.79, AED: 3.67, SAR: 3.75, CAD: 1.36, AUD: 1.5, GHS: 15.3 });
     }
   };
 
@@ -86,7 +105,9 @@ export default function AdminDashboard() {
   };
 
   const handleCurrencyChange = async (nextCurrency: string) => {
-    const normalized = nextCurrency.toUpperCase();
+    const normalized = currencyOptions.includes(nextCurrency.toUpperCase())
+      ? nextCurrency.toUpperCase()
+      : "USD";
     setCurrency(normalized);
 
     try {
@@ -199,11 +220,13 @@ export default function AdminDashboard() {
     router.push("/admin/login");
   };
 
-  const formatMoney = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
+  const formatMoney = (amount: number) => {
+    const rate = currencyRates[currency] ?? 1;
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
-    }).format(amount);
+    }).format(amount * rate);
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
