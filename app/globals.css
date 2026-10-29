@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #202734;
+  --surface: #33363d;
+  --accent: #b7d894;
+  --text: #f5f4f2;
+  --muted: #dfe7ea;
+  --shadow: rgba(8, 11, 15, 0.4);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: "Georgia", serif;
+  --font-serif: "Georgia", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Georgia", serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: "Georgia", serif;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.line-clamp-2,
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  -webkit-line-clamp: 3;
+}
