@@ -38,6 +38,7 @@ const currencyOptions = ["USD", "EUR", "GBP", "AED", "SAR", "CAD", "AUD", "GHS"]
 export default function AdminDashboard() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Array<{ id: string; total: number; customer: string; status: string; currency: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currency, setCurrency] = useState("USD");
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
     void loadProducts();
     void loadCurrency();
     void loadRates();
+    void loadRecentOrders();
   }, []);
 
   const loadCurrency = async () => {
@@ -89,6 +91,33 @@ export default function AdminDashboard() {
       setProducts([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadRecentOrders = async () => {
+    try {
+      const response = await fetch("/api/orders");
+      const data = (await response.json()) as Array<{
+        id: string;
+        total: number;
+        currency: string;
+        customer: { firstName: string; lastName: string };
+        status: string;
+      }>;
+
+      setRecentOrders(
+        (data ?? [])
+          .slice(0, 4)
+          .map((order) => ({
+            id: order.id,
+            total: order.total,
+            currency: order.currency,
+            customer: `${order.customer.firstName} ${order.customer.lastName}`,
+            status: order.status,
+          })),
+      );
+    } catch {
+      setRecentOrders([]);
     }
   };
 
@@ -227,23 +256,25 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
+    <div className="min-h-screen bg-[var(--bg)] px-3 py-5 text-[var(--text)] sm:px-4 md:px-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-[var(--surface)] p-6 md:flex-row md:items-center md:justify-between">
+        <header className="mb-6 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-[var(--surface)] p-4 sm:rounded-[2rem] sm:p-6 md:mb-8 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35rem] text-[var(--accent)]">Admin panel</p>
-            <h1 className="mt-3 text-3xl text-white">Dashboard</h1>
+            <p className="text-[10px] uppercase tracking-[0.25rem] text-[var(--accent)] sm:text-xs">
+              Admin panel
+            </p>
+            <h1 className="mt-2 text-2xl text-white sm:mt-3 sm:text-3xl">Dashboard</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <a
               href="/admin/orders"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              className="rounded-full border border-white/10 px-3 py-2 text-xs text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)] sm:px-4 sm:text-sm"
             >
               Orders
             </a>
 
-            <label className="flex items-center gap-2 rounded-full border border-white/10 bg-[#1d232b] px-3 py-2 text-sm text-white/80">
+            <label className="flex items-center gap-2 rounded-full border border-white/10 bg-[#1d232b] px-2.5 py-2 text-xs text-white/80 sm:px-3 sm:text-sm">
               <span>Currency</span>
               <select
                 value={currency}
@@ -261,60 +292,89 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              className="rounded-full border border-white/10 px-3 py-2 text-xs text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)] sm:px-4 sm:text-sm"
             >
               Logout
             </button>
           </div>
         </header>
 
-        <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-[2rem] border border-white/10 bg-[var(--surface)] p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl text-white">
+        <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[1.5rem] border border-white/10 bg-[var(--surface)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.25rem] text-white/60">Products</p>
+            <p className="mt-3 text-2xl text-white">{products.length}</p>
+          </div>
+          <div className="rounded-[1.5rem] border border-white/10 bg-[var(--surface)] p-4">
+            <p className="text-[10px] uppercase tracking-[0.25rem] text-white/60">Orders</p>
+            <p className="mt-3 text-2xl text-white">{recentOrders.length}</p>
+          </div>
+          <div className="rounded-[1.5rem] border border-white/10 bg-[var(--surface)] p-4 md:col-span-2">
+            <p className="text-[10px] uppercase tracking-[0.25rem] text-white/60">Latest orders</p>
+            <div className="mt-3 space-y-2 text-xs text-white/80 sm:text-sm">
+              {recentOrders.length === 0 ? (
+                <p>No orders yet.</p>
+              ) : (
+                recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2">
+                    <div>
+                      <p className="text-white">{order.customer}</p>
+                      <p className="text-[10px] uppercase tracking-[0.2rem] text-[var(--accent)]">{order.status}</p>
+                    </div>
+                    <p className="text-[var(--accent)]">{new Intl.NumberFormat("en-US", { style: "currency", currency: order.currency || "USD" }).format(order.total)}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <section className="rounded-[1.5rem] border border-white/10 bg-[var(--surface)] p-4 sm:rounded-[2rem] sm:p-6">
+            <div className="mb-5 flex items-center justify-between gap-3 sm:mb-6">
+              <h2 className="text-xl text-white sm:text-2xl">
                 {editingId ? "Edit product" : "Add new product"}
               </h2>
               {editingId && (
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="text-sm text-[var(--accent)] hover:opacity-80"
+                  className="text-xs text-[var(--accent)] hover:opacity-80 sm:text-sm"
                 >
                   Cancel
                 </button>
               )}
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               <div>
-                <label className="mb-2 block text-sm text-white/70">Title</label>
+                <label className="mb-2 block text-xs text-white/70 sm:text-sm">Title</label>
                 <input
                   value={form.title}
                   onChange={(event) => setForm({ ...form, title: event.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)] sm:px-4 sm:py-3 sm:text-base"
                   placeholder="Luxury silk dress"
                 />
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
                 <div>
-                  <label className="mb-2 block text-sm text-white/70">Price</label>
+                  <label className="mb-2 block text-xs text-white/70 sm:text-sm">Price</label>
                   <input
                     type="number"
                     min="0"
                     value={form.price}
                     onChange={(event) => setForm({ ...form, price: event.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+                    className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)] sm:px-4 sm:py-3 sm:text-base"
                     placeholder="199"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm text-white/70">Category</label>
+                  <label className="mb-2 block text-xs text-white/70 sm:text-sm">Category</label>
                   <select
                     value={form.category}
                     onChange={(event) => setForm({ ...form, category: event.target.value })}
-                    className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+                    className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)] sm:px-4 sm:py-3 sm:text-base"
                   >
                     <option value="Accessories">Accessories</option>
                     <option value="Dresses">Dresses</option>
@@ -326,22 +386,22 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-white/70">Sizes</label>
+                <label className="mb-2 block text-xs text-white/70 sm:text-sm">Sizes</label>
                 <input
                   value={form.sizes}
                   onChange={(event) => setForm({ ...form, sizes: event.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)] sm:px-4 sm:py-3 sm:text-base"
                   placeholder="XS, S, M, L"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-white/70">Product image</label>
+                <label className="mb-2 block text-xs text-white/70 sm:text-sm">Product image</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(event) => void handleImageUpload(event.target.files?.[0] ?? null)}
-                  className="w-full rounded-xl border border-dashed border-white/10 bg-[#1d232b] px-4 py-3 text-sm text-white/80 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--accent)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--bg)]"
+                  className="w-full rounded-xl border border-dashed border-white/10 bg-[#1d232b] px-3 py-2.5 text-xs text-white/80 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--accent)] file:px-3 file:py-2 file:text-xs file:font-medium file:text-[var(--bg)] sm:px-4 sm:py-3 sm:text-sm"
                 />
                 {selectedImage && (
                   <p className="mt-2 text-xs text-[var(--accent)]">
@@ -351,39 +411,39 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-white/70">Image URL (optional fallback)</label>
+                <label className="mb-2 block text-xs text-white/70 sm:text-sm">Image URL (optional fallback)</label>
                 <input
                   value={form.imageUrl}
                   onChange={(event) => setForm({ ...form, imageUrl: event.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)] sm:px-4 sm:py-3 sm:text-base"
                   placeholder="https://images.unsplash.com/..."
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-white/70">Description</label>
+                <label className="mb-2 block text-xs text-white/70 sm:text-sm">Description</label>
                 <textarea
                   value={form.description}
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
-                  rows={5}
-                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+                  rows={4}
+                  className="w-full rounded-xl border border-white/10 bg-[#1d232b] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)] sm:px-4 sm:py-3 sm:text-base"
                   placeholder="Product details and material notes"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[var(--bg)] transition hover:opacity-90"
+                className="w-full rounded-full bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--bg)] transition hover:opacity-90 sm:py-3"
               >
                 {editingId ? "Update product" : "Add product"}
               </button>
             </form>
           </section>
 
-          <section className="rounded-[2rem] border border-white/10 bg-[var(--surface)] p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl text-white">Catalog</h2>
-              <span className="rounded-full border border-white/10 bg-[#1d232b] px-3 py-1 text-sm text-[var(--accent)]">
+          <section className="rounded-[1.5rem] border border-white/10 bg-[var(--surface)] p-4 sm:rounded-[2rem] sm:p-6">
+            <div className="mb-5 flex items-center justify-between sm:mb-6">
+              <h2 className="text-xl text-white sm:text-2xl">Catalog</h2>
+              <span className="rounded-full border border-white/10 bg-[#1d232b] px-2.5 py-1 text-xs text-[var(--accent)] sm:px-3 sm:text-sm">
                 {products.length} items
               </span>
             </div>
@@ -402,36 +462,36 @@ export default function AdminDashboard() {
                     <img
                       src={product.imageUrl}
                       alt={product.title}
-                      className="h-28 w-full rounded-[1rem] object-cover md:w-28"
+                      className="h-24 w-full rounded-[1rem] object-cover sm:h-28 md:w-28"
                     />
 
                     <div className="flex flex-1 flex-col justify-between gap-3">
                       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.25rem] text-[var(--accent)]">
+                          <p className="text-[10px] uppercase tracking-[0.2rem] text-[var(--accent)] sm:text-xs">
                             {product.category}
                           </p>
-                          <h3 className="mt-2 text-xl text-white">{product.title}</h3>
+                          <h3 className="mt-2 text-base text-white sm:text-xl">{product.title}</h3>
                         </div>
-                        <span className="text-base text-[var(--accent)]">
+                        <span className="text-sm text-[var(--accent)] sm:text-base">
                           {formatMoney(product.price)}
                         </span>
                       </div>
 
-                      <p className="line-clamp-2 text-sm leading-6 text-white/70">{product.description}</p>
+                      <p className="line-clamp-2 text-xs leading-5 text-white/70 sm:text-sm sm:leading-6">{product.description}</p>
 
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(product)}
-                          className="rounded-full border border-[var(--accent)] bg-[var(--accent)] px-4 py-2 text-sm text-[var(--bg)]"
+                          className="rounded-full border border-[var(--accent)] bg-[var(--accent)] px-3 py-1.5 text-xs text-[var(--bg)] sm:px-4 sm:py-2 sm:text-sm"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(product.id)}
-                          className="rounded-full border border-red-500/50 px-4 py-2 text-sm text-red-200"
+                          className="rounded-full border border-red-500/50 px-3 py-1.5 text-xs text-red-200 sm:px-4 sm:py-2 sm:text-sm"
                         >
                           Delete
                         </button>
