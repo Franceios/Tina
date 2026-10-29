@@ -16,13 +16,6 @@ type Product = {
 
 type CartItem = Product & { quantity: number };
 
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
-const formatMoney = (amount: number) => currency.format(amount);
-
 const fallbackImage =
   "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80";
 
@@ -33,6 +26,13 @@ export default function Storefront() {
   const [searchText, setSearchText] = useState("");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [currencyCode, setCurrencyCode] = useState("USD");
+
+  const formatMoney = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode,
+    }).format(amount);
 
   useEffect(() => {
     const saved = localStorage.getItem("tinnah-cart");
@@ -45,6 +45,7 @@ export default function Storefront() {
     }
 
     void fetchProducts();
+    void fetchCurrency();
   }, []);
 
   useEffect(() => {
@@ -55,6 +56,18 @@ export default function Storefront() {
     const response = await fetch("/api/products");
     const data = (await response.json()) as Product[];
     setProducts(data);
+  };
+
+  const fetchCurrency = async () => {
+    try {
+      const response = await fetch("/api/settings");
+      const data = (await response.json()) as { currency?: string };
+      if (data.currency) {
+        setCurrencyCode(data.currency);
+      }
+    } catch {
+      setCurrencyCode("USD");
+    }
   };
 
   const categories = useMemo(

@@ -15,7 +15,16 @@ type Product = {
   featured: boolean;
 };
 
-const emptyForm = {
+type ProductForm = {
+  title: string;
+  price: string;
+  category: string;
+  description: string;
+  imageUrl: string;
+  sizes: string;
+};
+
+const emptyForm: ProductForm = {
   title: "",
   price: "",
   category: "Accessories",
@@ -24,17 +33,16 @@ const emptyForm = {
   sizes: "One Size",
 };
 
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
+const currencyOptions = ["USD", "EUR", "GBP", "AED", "SAR", "CAD", "AUD"];
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [currency, setCurrency] = useState("USD");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [form, setForm] = useState<ProductForm>(emptyForm);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("tinnah-admin-token") : null;
@@ -44,7 +52,20 @@ export default function AdminDashboard() {
     }
 
     void loadProducts();
+    void loadCurrency();
   }, [router]);
+
+  const loadCurrency = async () => {
+    try {
+      const response = await fetch("/api/settings");
+      const data = (await response.json()) as { currency?: string };
+      if (data.currency) {
+        setCurrency(data.currency);
+      }
+    } catch {
+      setCurrency("USD");
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -60,18 +81,64 @@ export default function AdminDashboard() {
 
   const resetForm = () => {
     setForm(emptyForm);
+    setSelectedImage(null);
     setEditingId(null);
+  };
+
+  const handleCurrencyChange = async (nextCurrency: string) => {
+    const normalized = nextCurrency.toUpperCase();
+    setCurrency(normalized);
+
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currency: normalized }),
+      });
+    } catch {
+      window.alert("Unable to update the storefront currency.");
+    }
+  };
+
+  const handleImageUpload = async (file: File | null) => {
+    if (!file) {
+      setSelectedImage(null);
+      return;
+    }
+
+    const isImage = file.type.startsWith("image/");
+    if (!isImage) {
+      window.alert("Please select an image file.");
+      setSelectedImage(null);
+      return;
+    }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("Image read failed"));
+      reader.readAsDataURL(file);
+    });
+
+    setSelectedImage(file);
+    setForm((current) => ({ ...current, imageUrl: dataUrl }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const imageValue =
+      form.imageUrl && form.imageUrl.trim().length > 0
+        ? form.imageUrl.trim()
+        : "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80";
 
     const payload = {
       title: form.title,
       price: Number(form.price),
       category: form.category,
       description: form.description,
-      imageUrl: form.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80",
+      imageUrl: imageValue,
+      gallery: [imageValue],
       sizes: form.sizes
         .split(",")
         .map((size) => size.trim())
@@ -109,6 +176,7 @@ export default function AdminDashboard() {
       imageUrl: product.imageUrl,
       sizes: product.sizes.join(", "),
     });
+    setSelectedImage(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -131,6 +199,12 @@ export default function AdminDashboard() {
     router.push("/admin/login");
   };
 
+  const formatMoney = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(amount);
+
   return (
     <div className="min-h-screen bg-[var(--bg)] px-4 py-8 text-[var(--text)] md:px-8">
       <div className="mx-auto max-w-7xl">
@@ -140,13 +214,30 @@ export default function AdminDashboard() {
             <h1 className="mt-3 text-3xl text-white">Dashboard</h1>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 rounded-full border border-white/10 bg-[#1d232b] px-3 py-2 text-sm text-white/80">
+              <span>Currency</span>
+              <select
+                value={currency}
+                onChange={(event) => void handleCurrencyChange(event.target.value)}
+                className="bg-transparent text-white outline-none"
+              >
+                {currencyOptions.map((option) => (
+                  <option key={option} value={option} className="bg-[#1d232b] text-white">
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
@@ -217,7 +308,22 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-white/70">Image URL</label>
+                <label className="mb-2 block text-sm text-white/70">Product image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => void handleImageUpload(event.target.files?.[0] ?? null)}
+                  className="w-full rounded-xl border border-dashed border-white/10 bg-[#1d232b] px-4 py-3 text-sm text-white/80 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--accent)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[var(--bg)]"
+                />
+                {selectedImage && (
+                  <p className="mt-2 text-xs text-[var(--accent)]">
+                    {selectedImage.name} selected
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-white/70">Image URL (optional fallback)</label>
                 <input
                   value={form.imageUrl}
                   onChange={(event) => setForm({ ...form, imageUrl: event.target.value })}
@@ -280,7 +386,7 @@ export default function AdminDashboard() {
                           <h3 className="mt-2 text-xl text-white">{product.title}</h3>
                         </div>
                         <span className="text-base text-[var(--accent)]">
-                          {currency.format(product.price)}
+                          {formatMoney(product.price)}
                         </span>
                       </div>
 

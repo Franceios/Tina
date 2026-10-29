@@ -13,6 +13,10 @@ export type Product = {
   featured: boolean;
 };
 
+export type StoreSettings = {
+  currency: string;
+};
+
 export const DEFAULT_PRODUCTS: Product[] = [
   {
     id: "p-1",
@@ -84,7 +88,12 @@ export const DEFAULT_PRODUCTS: Product[] = [
   },
 ];
 
+export const DEFAULT_SETTINGS: StoreSettings = {
+  currency: "USD",
+};
+
 const DATA_PATH = path.join(process.cwd(), "data", "products.json");
+const SETTINGS_PATH = path.join(process.cwd(), "data", "settings.json");
 
 async function ensureStoreFile() {
   await fs.mkdir(path.dirname(DATA_PATH), { recursive: true });
@@ -92,6 +101,15 @@ async function ensureStoreFile() {
     await fs.access(DATA_PATH);
   } catch {
     await fs.writeFile(DATA_PATH, JSON.stringify(DEFAULT_PRODUCTS, null, 2), "utf-8");
+  }
+}
+
+async function ensureSettingsFile() {
+  await fs.mkdir(path.dirname(SETTINGS_PATH), { recursive: true });
+  try {
+    await fs.access(SETTINGS_PATH);
+  } catch {
+    await fs.writeFile(SETTINGS_PATH, JSON.stringify(DEFAULT_SETTINGS, null, 2), "utf-8");
   }
 }
 
@@ -115,6 +133,30 @@ export async function getProducts(): Promise<Product[]> {
 export async function persistProducts(products: Product[]) {
   await ensureStoreFile();
   await fs.writeFile(DATA_PATH, JSON.stringify(products, null, 2), "utf-8");
+}
+
+export async function getCurrencyCode(): Promise<string> {
+  await ensureSettingsFile();
+
+  try {
+    const raw = await fs.readFile(SETTINGS_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as Partial<StoreSettings>;
+    const value = parsed.currency ?? DEFAULT_SETTINGS.currency;
+    return /^[A-Z]{3}$/.test(value) ? value : DEFAULT_SETTINGS.currency;
+  } catch {
+    return DEFAULT_SETTINGS.currency;
+  }
+}
+
+export async function setCurrencyCode(currency: string): Promise<string> {
+  const normalized = /^[A-Z]{3}$/.test(currency) ? currency.toUpperCase() : DEFAULT_SETTINGS.currency;
+  await ensureSettingsFile();
+  await fs.writeFile(
+    SETTINGS_PATH,
+    JSON.stringify({ currency: normalized }, null, 2),
+    "utf-8",
+  );
+  return normalized;
 }
 
 export function makeProductId() {
