@@ -495,7 +495,10 @@ export default function Storefront() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsCartOpen(true)}
+                    onClick={() => {
+                      setSelectedProduct(null);
+                      setIsCartOpen(true);
+                    }}
                     className="rounded-full border border-white/15 px-4 py-3 text-sm text-white"
                   >
                     View Cart
