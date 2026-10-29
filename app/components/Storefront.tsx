@@ -431,12 +431,12 @@ export default function Storefront() {
                 <span>Subtotal</span>
                 <span>{formatMoney(subtotal)}</span>
               </div>
-              <button
-                type="button"
-                className="mt-4 w-full rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[var(--bg)]"
+              <a
+                href="/checkout"
+                className="mt-4 block w-full rounded-full bg-[var(--accent)] px-4 py-3 text-center text-sm font-medium text-[var(--bg)]"
               >
                 Checkout
-              </button>
+              </a>
             </div>
           </aside>
         </div>
