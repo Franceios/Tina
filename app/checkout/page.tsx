@@ -72,12 +72,59 @@ export default function CheckoutPage() {
   const shipping = cartItems.length > 0 ? 25 : 0;
   const total = subtotal + shipping;
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const firstName = String(formData.get("firstName") ?? "").trim();
+    const lastName = String(formData.get("lastName") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const address = String(formData.get("address") ?? "").trim();
+    const city = String(formData.get("city") ?? "").trim();
+    const country = String(formData.get("country") ?? "").trim();
+
+    const payload = {
+      customer: {
+        firstName,
+        lastName,
+        email,
+        address,
+        city,
+        country,
+      },
+      items: cartItems.map((item) => ({
+        id: item.id,
+        title: item.title,
+        category: item.category,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+      subtotal,
+      shipping,
+      total,
+      currency: currencyCode,
+    };
+
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = (await response.json().catch(() => ({ error: "Order could not be placed." }))) as {
+        error?: string;
+      };
+      window.alert(err.error ?? "Order could not be placed.");
+      return;
+    }
+
+    const result = (await response.json()) as { order: { id: string } };
+    localStorage.setItem("tinnah-last-order", JSON.stringify(result.order));
     localStorage.removeItem("tinnah-cart");
     setCartItems([]);
-    window.alert("Your order has been placed successfully.");
-    window.location.href = "/";
+    window.location.href = "/checkout/confirmation";
   };
 
   if (cartItems.length === 0) {
@@ -126,6 +173,7 @@ export default function CheckoutPage() {
               <label className="block text-sm text-white/70">
                 First name
                 <input
+                  name="firstName"
                   required
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
                   placeholder="Jane"
@@ -134,6 +182,7 @@ export default function CheckoutPage() {
               <label className="block text-sm text-white/70">
                 Last name
                 <input
+                  name="lastName"
                   required
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
                   placeholder="Doe"
@@ -144,6 +193,7 @@ export default function CheckoutPage() {
             <label className="block text-sm text-white/70">
               Email address
               <input
+                name="email"
                 required
                 type="email"
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
@@ -154,6 +204,7 @@ export default function CheckoutPage() {
             <label className="block text-sm text-white/70">
               Street address
               <input
+                name="address"
                 required
                 className="mt-2 w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
                 placeholder="123 High Street"
@@ -164,6 +215,7 @@ export default function CheckoutPage() {
               <label className="block text-sm text-white/70">
                 City
                 <input
+                  name="city"
                   required
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
                   placeholder="Accra"
@@ -172,6 +224,7 @@ export default function CheckoutPage() {
               <label className="block text-sm text-white/70">
                 Country
                 <input
+                  name="country"
                   required
                   className="mt-2 w-full rounded-xl border border-white/10 bg-[#1d232b] px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
                   placeholder="Ghana"

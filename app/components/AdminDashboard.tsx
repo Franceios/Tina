@@ -238,6 +238,13 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            <a
+              href="/admin/orders"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              Orders
+            </a>
+
             <label className="flex items-center gap-2 rounded-full border border-white/10 bg-[#1d232b] px-3 py-2 text-sm text-white/80">
               <span>Currency</span>
               <select
