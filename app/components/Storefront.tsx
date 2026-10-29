@@ -172,7 +172,7 @@ export default function Storefront() {
               Curated icons
             </p>
             <h1 className="text-2xl font-semibold tracking-wide text-[var(--text)]">
-              Tinnah Collections
+              A.M Tinnah&apos;s Collections
             </h1>
           </div>
 

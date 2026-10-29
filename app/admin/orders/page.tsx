@@ -34,23 +34,8 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        const response = await fetch("/api/admin/session", { method: "GET" });
-        if (!response.ok) {
-          router.replace("/admin/login");
-          return;
-        }
-      } catch {
-        router.replace("/admin/login");
-        return;
-      }
-
-      void fetchOrders();
-    };
-
-    void checkAccess();
-  }, [router]);
+    void fetchOrders();
+  }, []);
 
   const fetchOrders = async () => {
     try {

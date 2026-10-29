@@ -46,25 +46,10 @@ export default function AdminDashboard() {
   const [form, setForm] = useState<ProductForm>(emptyForm);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        const response = await fetch("/api/admin/session", { method: "GET" });
-        if (!response.ok) {
-          router.replace("/admin/login");
-          return;
-        }
-      } catch {
-        router.replace("/admin/login");
-        return;
-      }
-
-      void loadProducts();
-      void loadCurrency();
-      void loadRates();
-    };
-
-    void checkAccess();
-  }, [router]);
+    void loadProducts();
+    void loadCurrency();
+    void loadRates();
+  }, []);
 
   const loadCurrency = async () => {
     try {
@@ -230,7 +215,7 @@ export default function AdminDashboard() {
     } catch {
       // ignore and continue to redirect
     }
-    router.push("/admin/login");
+    router.push("/");
   };
 
   const formatMoney = (amount: number) => {

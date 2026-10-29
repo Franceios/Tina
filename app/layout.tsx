@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tinnah Collections",
-  description: "Luxury e-commerce storefront and admin management platform for Tinnah Collections.",
+  title: "A.M Tinnah's Collections",
+  description: "Luxury e-commerce storefront and admin management platform for A.M Tinnah's Collections.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
