@@ -34,13 +34,22 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("tinnah-admin-token");
-    if (!token) {
-      router.replace("/admin/login");
-      return;
-    }
+    const checkAccess = async () => {
+      try {
+        const response = await fetch("/api/admin/session", { method: "GET" });
+        if (!response.ok) {
+          router.replace("/admin/login");
+          return;
+        }
+      } catch {
+        router.replace("/admin/login");
+        return;
+      }
 
-    void fetchOrders();
+      void fetchOrders();
+    };
+
+    void checkAccess();
   }, [router]);
 
   const fetchOrders = async () => {

@@ -5,8 +5,8 @@ import { useState } from "react";
 
 export default function AdminLoginForm() {
   const router = useRouter();
-  const [username, setUsername] = useState("Admin");
-  const [password, setPassword] = useState("@123Basil");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,15 +24,14 @@ export default function AdminLoginForm() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = (await response.json()) as { token?: string; error?: string };
+      const data = (await response.json()) as { ok?: boolean; error?: string };
 
-      if (!response.ok || !data.token) {
+      if (!response.ok || !data.ok) {
         setError(data.error ?? "Authentication failed.");
         setLoading(false);
         return;
       }
 
-      localStorage.setItem("tinnah-admin-token", data.token);
       router.push("/admin/dashboard");
     } catch {
       setError("Unable to connect to the server.");

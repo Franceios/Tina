@@ -46,15 +46,24 @@ export default function AdminDashboard() {
   const [form, setForm] = useState<ProductForm>(emptyForm);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("tinnah-admin-token") : null;
-    if (!token) {
-      router.replace("/admin/login");
-      return;
-    }
+    const checkAccess = async () => {
+      try {
+        const response = await fetch("/api/admin/session", { method: "GET" });
+        if (!response.ok) {
+          router.replace("/admin/login");
+          return;
+        }
+      } catch {
+        router.replace("/admin/login");
+        return;
+      }
 
-    void loadProducts();
-    void loadCurrency();
-    void loadRates();
+      void loadProducts();
+      void loadCurrency();
+      void loadRates();
+    };
+
+    void checkAccess();
   }, [router]);
 
   const loadCurrency = async () => {
@@ -215,8 +224,12 @@ export default function AdminDashboard() {
     await loadProducts();
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("tinnah-admin-token");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch {
+      // ignore and continue to redirect
+    }
     router.push("/admin/login");
   };
 

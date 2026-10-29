@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ADMIN_USERNAME = "Admin";
-const ADMIN_PASSWORD = "@123Basil";
+import { ADMIN_COOKIE_NAME, createAdminSessionToken, getAdminCredentials } from "@/app/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -9,11 +8,31 @@ export async function POST(request: Request) {
     const username = body.username?.trim();
     const password = body.password?.trim();
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      return NextResponse.json({
-        token: "tinnah-admin-session-token",
-        user: ADMIN_USERNAME,
+    let credentials;
+    try {
+      credentials = getAdminCredentials();
+    } catch {
+      return NextResponse.json(
+        { error: "Admin credentials are not configured on the server." },
+        { status: 503 },
+      );
+    }
+
+    if (username === credentials.username && password === credentials.password) {
+      const token = createAdminSessionToken();
+      const response = NextResponse.json({ ok: true, user: credentials.username });
+
+      response.cookies.set({
+        name: ADMIN_COOKIE_NAME,
+        value: token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 8,
       });
+
+      return response;
     }
 
     return NextResponse.json(

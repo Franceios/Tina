@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 
+import { isAdminAuthenticated } from "@/app/lib/auth";
 import { sendOrderEmail } from "@/app/lib/email";
 import { getOrders, makeOrderId, saveOrder, type Order, type OrderItem } from "@/app/lib/orders";
 
 export async function GET() {
+  const authenticated = await isAdminAuthenticated();
+  if (!authenticated) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const orders = await getOrders();
   return NextResponse.json(orders);
 }
@@ -41,10 +47,11 @@ export async function POST(request: Request) {
       country: (body.customer?.country ?? "").trim(),
     };
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const items: OrderItem[] = (body.items ?? []).map((item) => ({
-      id: item.id ?? "unknown",
-      title: item.title ?? "Product",
-      category: item.category ?? "General",
+      id: String(item.id ?? "unknown").slice(0, 80),
+      title: String(item.title ?? "Product").slice(0, 200).trim(),
+      category: String(item.category ?? "General").slice(0, 80).trim(),
       quantity: Number(item.quantity ?? 0),
       price: Number(item.price ?? 0),
     }));
@@ -58,14 +65,17 @@ export async function POST(request: Request) {
       !customer.firstName ||
       !customer.lastName ||
       !customer.email ||
+      !emailRegex.test(customer.email) ||
       !customer.address ||
       !customer.city ||
       !customer.country ||
       items.length === 0 ||
+      items.some((item) => item.quantity <= 0 || item.price < 0) ||
       !Number.isFinite(total) ||
-      total <= 0
+      total <= 0 ||
+      !/^[A-Z]{3}$/.test(currency)
     ) {
-      return NextResponse.json({ error: "Incomplete order details." }, { status: 400 });
+      return NextResponse.json({ error: "Incomplete or invalid order details." }, { status: 400 });
     }
 
     const order: Order = {
