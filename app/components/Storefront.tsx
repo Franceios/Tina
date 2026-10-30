@@ -25,6 +25,7 @@ export default function Storefront() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [sortOrder, setSortOrder] = useState("featured");
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [currencyCode, setCurrencyCode] = useState("USD");
@@ -72,12 +73,14 @@ export default function Storefront() {
     try {
       const response = await fetch("/api/settings");
       const data = (await response.json()) as { currency?: string };
-      if (data.currency) {
+      if (data.currency && !localStorage.getItem("tinnah-currency")) {
         setCurrencyCode(data.currency);
         localStorage.setItem("tinnah-currency", data.currency);
       }
     } catch {
-      setCurrencyCode("USD");
+      if (!localStorage.getItem("tinnah-currency")) {
+        setCurrencyCode("USD");
+      }
     }
   };
 
@@ -121,6 +124,18 @@ export default function Storefront() {
     });
   }, [products, searchText, selectedCategory]);
 
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts];
+    if (sortOrder === "price-low") {
+      sorted.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === "price-high") {
+      sorted.sort((a, b) => b.price - a.price);
+    } else if (sortOrder === "featured") {
+      sorted.sort((a, b) => Number(b.featured) - Number(a.featured));
+    }
+    return sorted;
+  }, [filteredProducts, sortOrder]);
+
   const addToCart = (product: Product) => {
     setCartItems((current) => {
       const existing = current.find((item) => item.id === product.id);
@@ -147,69 +162,56 @@ export default function Storefront() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const updateCurrency = async (nextCurrency: string) => {
+  const updateCurrency = (nextCurrency: string) => {
     const selected = supportedCurrencies.includes(nextCurrency) ? nextCurrency : "USD";
     setCurrencyCode(selected);
     localStorage.setItem("tinnah-currency", selected);
-
-    try {
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency: selected }),
-      });
-    } catch {
-      // keep local selection if settings API is unavailable
-    }
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--bg)]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35rem] text-[var(--accent)]/80">
-              Curated icons
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-3 py-3 sm:px-5 lg:flex-nowrap lg:px-8">
+          <a href="/" className="min-w-0 flex-1 lg:flex-none" aria-label="A.M Tinnah's Collections home">
+            <p className="text-[9px] uppercase tracking-[0.22rem] text-[var(--accent)]/80 sm:text-[10px]">
+              Curated fashion
             </p>
-            <h1 className="text-2xl font-semibold tracking-wide text-[var(--text)]">
+            <h1 className="truncate text-sm font-semibold text-[var(--text)] sm:text-lg">
               A.M Tinnah&apos;s Collections
             </h1>
-          </div>
+          </a>
 
-          <div className="hidden flex-1 items-center justify-center md:flex">
-            <div className="flex w-full max-w-xl items-center gap-2 rounded-full border border-white/10 bg-[var(--surface)] px-4 py-2 shadow-lg shadow-black/10">
-              <span className="text-lg text-[var(--accent)]">⌕</span>
-              <input
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Search signature looks"
-                className="w-full bg-transparent text-sm text-[var(--text)] placeholder:text-white/50 focus:outline-none"
-              />
-            </div>
-          </div>
+          <label className="order-3 flex h-10 w-full overflow-hidden rounded-lg border border-white/15 bg-white text-[#202734] focus-within:ring-2 focus-within:ring-[var(--accent)] lg:order-2 lg:h-11 lg:flex-1">
+            <span className="flex items-center border-r border-gray-200 px-3 text-xs text-gray-600 sm:text-sm">
+              Search
+            </span>
+            <input
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search clothing, shoes, bags..."
+              aria-label="Search products"
+              className="min-w-0 flex-1 bg-transparent px-3 text-sm text-[#202734] placeholder:text-gray-500 focus:outline-none"
+            />
+            {searchText && (
+              <button
+                type="button"
+                onClick={() => setSearchText("")}
+                className="px-3 text-xs font-medium text-gray-600 hover:text-black"
+                aria-label="Clear search"
+              >
+                Clear
+              </button>
+            )}
+          </label>
 
-          <div className="flex items-center gap-3">
-            <nav className="hidden items-center gap-5 text-sm text-white/80 md:flex">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setSelectedCategory(category)}
-                  className={`transition hover:text-[var(--accent)] ${
-                    selectedCategory === category ? "text-[var(--accent)]" : ""
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </nav>
-
-            <label className="flex items-center gap-2 rounded-full border border-white/10 bg-[var(--surface)] px-3 py-2 text-xs text-white/80">
-              <span>Currency</span>
+          <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3 lg:gap-3">
+            <label className="flex items-center gap-1.5 rounded-lg border border-white/15 px-2 py-2 text-[10px] text-white/80 sm:gap-2 sm:px-3 sm:text-xs">
+              <span className="hidden sm:inline">Currency</span>
               <select
                 value={currencyCode}
-                onChange={(event) => void updateCurrency(event.target.value)}
-                className="bg-transparent text-sm text-white outline-none"
+                onChange={(event) => updateCurrency(event.target.value)}
+                aria-label="Currency"
+                className="max-w-[4.5rem] bg-transparent text-xs text-white outline-none sm:text-sm"
               >
                 {supportedCurrencies.map((option) => (
                   <option key={option} value={option} className="bg-[#1d232b] text-white">
@@ -222,147 +224,152 @@ export default function Storefront() {
             <button
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-[var(--accent)] bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg)] transition hover:opacity-90"
+              className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-medium text-[var(--bg)] transition hover:opacity-90 sm:px-4 sm:text-sm"
             >
               Cart
-              <span className="rounded-full bg-[var(--bg)] px-2 py-0.5 text-xs text-[var(--accent)]">
+              <span className="rounded-full bg-[var(--bg)] px-1.5 py-0.5 text-[10px] text-[var(--accent)] sm:text-xs">
                 {cartItems.reduce((total, item) => total + item.quantity, 0)}
               </span>
             </button>
           </div>
         </div>
-      </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-        <section className="mb-8 grid gap-6 overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface)] p-6 shadow-2xl shadow-black/20 md:grid-cols-[1.2fr_0.8fr] md:p-10">
-          <div className="flex flex-col justify-center">
-            <p className="mb-3 text-xs uppercase tracking-[0.4rem] text-[var(--accent)]">
-              New Season Edit
-            </p>
-            <h2 className="max-w-lg text-4xl leading-tight text-white md:text-5xl">
-              Statement pieces designed for every grand entrance.
-            </h2>
-            <p className="mt-4 max-w-md text-base leading-7 text-white/70">
-              Discover luxury silhouettes, elevated essentials, and timeless accessories curated for your next unforgettable moment.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("All")}
-                className="rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-medium text-[var(--bg)] transition hover:opacity-90"
-              >
-                Shop collection
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedProduct(products[0] ?? null)}
-                className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                View highlight
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#1a1f27]">
-              <img
-                src={products[0]?.imageUrl ?? fallbackImage}
-                alt={products[0]?.title ?? "Luxury apparel"}
-                className="h-56 w-full object-cover"
-              />
-            </div>
-            <div className="flex flex-col justify-between rounded-[1.5rem] border border-white/10 bg-[#1d232b] p-5">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3rem] text-[var(--accent)]">Featured</p>
-                <h3 className="mt-3 text-2xl text-white">Modern Luxe</h3>
-              </div>
-              <div className="mt-6 text-sm text-white/70">
-                <p>Limited edition</p>
-                <p className="mt-2 text-3xl font-medium text-[var(--accent)]">
-                  {formatMoney(products[0]?.price ?? 160)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35rem] text-[var(--accent)]">Collection</p>
-            <h3 className="mt-2 text-3xl text-white">Premium essentials</h3>
-          </div>
-
-          <div className="flex flex-wrap gap-2 md:justify-end">
+        <nav aria-label="Product categories" className="border-t border-white/10">
+          <div className="mx-auto flex max-w-[1440px] gap-1 overflow-x-auto px-3 py-2 sm:px-5 lg:px-8">
             {categories.map((category) => (
               <button
                 key={category}
                 type="button"
                 onClick={() => setSelectedCategory(category)}
-                className={`rounded-full border px-4 py-2 text-sm transition ${
+                aria-pressed={selectedCategory === category}
+                className={`shrink-0 rounded-md px-3 py-2 text-xs transition sm:text-sm ${
                   selectedCategory === category
-                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--bg)]"
-                    : "border-white/15 bg-transparent text-white/70 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                    ? "bg-white/10 text-[var(--accent)]"
+                    : "text-white/75 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                {category}
+                {category === "All" ? "All products" : category}
               </button>
             ))}
           </div>
-        </section>
+        </nav>
+      </header>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {filteredProducts.map((product) => (
-            <article
-              key={product.id}
-              className="overflow-hidden rounded-[1.6rem] border border-white/10 bg-[var(--surface)] transition hover:-translate-y-1 hover:border-[var(--accent)]/70"
+      <main className="mx-auto max-w-[1440px] px-3 py-5 sm:px-5 sm:py-7 lg:px-8">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.2rem] text-[var(--accent)] sm:text-xs">
+              {selectedCategory === "All" ? "Shop collection" : selectedCategory}
+            </p>
+            <h2 className="mt-1 text-xl text-white sm:text-2xl">
+              {selectedCategory === "All" ? "Explore the collection" : `Shop ${selectedCategory}`}
+            </h2>
+            <p className="mt-1 text-xs text-white/60 sm:text-sm">
+              {filteredProducts.length} {filteredProducts.length === 1 ? "item" : "items"}
+              {searchText ? ` matching “${searchText}”` : " available"}
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-white/70 sm:text-sm">
+            <span>Sort by</span>
+            <select
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value)}
+              className="rounded-md border border-white/15 bg-[var(--surface)] px-2.5 py-2 text-xs text-white outline-none focus:border-[var(--accent)] sm:text-sm"
             >
-              <div className="relative">
-                <img
-                  src={product.imageUrl || fallbackImage}
-                  alt={product.title}
-                  className="h-72 w-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => setSelectedProduct(product)}
-                  className="absolute left-4 top-4 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-xs uppercase tracking-[0.2rem] text-white backdrop-blur-sm"
-                >
-                  Quick View
-                </button>
-              </div>
-
-              <div className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2rem] text-[var(--accent)]/80">
-                      {product.category}
-                    </p>
-                    <h4 className="mt-2 text-xl text-white">{product.title}</h4>
-                  </div>
-                  <span className="text-lg font-medium text-[var(--accent)]">
-                    {formatMoney(product.price)}
-                  </span>
-                </div>
-
-                <p className="line-clamp-3 text-sm leading-6 text-white/65">{product.description}</p>
-
-                <button
-                  type="button"
-                  onClick={() => addToCart(product)}
-                  className="w-full rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-medium text-[var(--bg)] transition hover:opacity-90"
-                >
-                  Add to Cart
-                </button>
-              </div>
-            </article>
-          ))}
+              <option value="featured">Featured</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+            </select>
+          </label>
         </div>
 
-        {filteredProducts.length === 0 && (
-          <div className="mt-10 rounded-[1.5rem] border border-dashed border-white/20 bg-[var(--surface)] p-12 text-center text-white/70">
-            No products match your search. Try another keyword or category.
-          </div>
-        )}
+        <div className="grid gap-5 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-7">
+          <aside className="hidden lg:block">
+            <h3 className="mb-3 text-sm font-semibold text-white">Departments</h3>
+            <ul className="space-y-1 border-b border-white/10 pb-4">
+              {categories.map((category) => {
+                const count = category === "All"
+                  ? products.length
+                  : products.filter((product) => product.category === category).length;
+                return (
+                  <li key={category}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategory(category)}
+                      aria-pressed={selectedCategory === category}
+                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm ${
+                        selectedCategory === category
+                          ? "bg-white/10 text-[var(--accent)]"
+                          : "text-white/70 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      <span>{category === "All" ? "All products" : category}</span>
+                      <span className="text-xs text-white/45">{count}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="pt-4">
+              <h3 className="mb-2 text-sm font-semibold text-white">Shopping</h3>
+              <p className="text-xs leading-5 text-white/55">
+                Curated pieces for everyday wear and special occasions.
+              </p>
+            </div>
+          </aside>
+
+          <section aria-label="Products">
+            {sortedProducts.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+                {sortedProducts.map((product) => (
+                  <article
+                    key={product.id}
+                    className="min-w-0 overflow-hidden rounded-lg border border-white/10 bg-[var(--surface)] transition hover:border-[var(--accent)]/60"
+                  >
+                    <div className="relative aspect-[4/5] bg-[#1a1f27]">
+                      <img
+                        src={product.imageUrl || fallbackImage}
+                        alt={product.title}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProduct(product)}
+                        className="absolute bottom-2 left-2 rounded-md border border-white/20 bg-black/60 px-2.5 py-1.5 text-[10px] font-medium text-white backdrop-blur-sm sm:bottom-3 sm:left-3 sm:text-xs"
+                      >
+                        Quick view
+                      </button>
+                    </div>
+
+                    <div className="flex min-h-[150px] flex-col p-3 sm:min-h-[172px] sm:p-4">
+                      <p className="text-[9px] uppercase tracking-[0.16rem] text-[var(--accent)] sm:text-[10px]">
+                        {product.category}
+                      </p>
+                      <h3 className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-white sm:text-sm">
+                        {product.title}
+                      </h3>
+                      <p className="mt-1 text-sm font-semibold text-white sm:text-base">
+                        {formatMoney(product.price)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product)}
+                        className="mt-auto w-full rounded-md bg-[var(--accent)] px-2 py-2 text-[10px] font-semibold text-[var(--bg)] transition hover:opacity-90 sm:py-2.5 sm:text-xs"
+                      >
+                        Add to cart
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/20 bg-[var(--surface)] px-5 py-12 text-center text-sm text-white/70">
+                No products match your search. Try another keyword or category.
+              </div>
+            )}
+          </section>
+        </div>
       </main>
 
       {isCartOpen && (
