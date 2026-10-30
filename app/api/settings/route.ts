@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isAdminAuthenticated } from "@/app/lib/auth";
 import { getCurrencyCode, setCurrencyCode } from "@/app/lib/store";
 
 export async function GET() {
@@ -8,6 +9,10 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = (await request.json()) as { currency?: string };
     const currency = await setCurrencyCode(body.currency ?? "USD");

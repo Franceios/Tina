@@ -34,14 +34,35 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void fetchOrders();
-  }, []);
+    const checkAccess = async () => {
+      try {
+        const response = await fetch("/api/admin/session");
+        if (!response.ok) {
+          router.replace("/admin/login");
+          return;
+        }
+        await fetchOrders();
+      } catch {
+        router.replace("/admin/login");
+      }
+    };
+
+    void checkAccess();
+  }, [router]);
 
   const fetchOrders = async () => {
     try {
       const response = await fetch("/api/orders");
-      const data = (await response.json()) as Order[];
-      setOrders(data);
+      if (response.status === 401) {
+        router.replace("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        setOrders([]);
+        return;
+      }
+      const data = (await response.json()) as unknown;
+      setOrders(Array.isArray(data) ? (data as Order[]) : []);
     } catch {
       setOrders([]);
     } finally {

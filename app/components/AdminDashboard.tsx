@@ -47,11 +47,26 @@ export default function AdminDashboard() {
   const [form, setForm] = useState<ProductForm>(emptyForm);
 
   useEffect(() => {
-    void loadProducts();
-    void loadCurrency();
-    void loadRates();
-    void loadRecentOrders();
-  }, []);
+    const checkAccess = async () => {
+      try {
+        const response = await fetch("/api/admin/session");
+        if (!response.ok) {
+          router.replace("/admin/login");
+          return;
+        }
+      } catch {
+        router.replace("/admin/login");
+        return;
+      }
+
+      void loadProducts();
+      void loadCurrency();
+      void loadRates();
+      void loadRecentOrders();
+    };
+
+    void checkAccess();
+  }, [router]);
 
   const loadCurrency = async () => {
     try {
@@ -97,6 +112,10 @@ export default function AdminDashboard() {
   const loadRecentOrders = async () => {
     try {
       const response = await fetch("/api/orders");
+      if (!response.ok) {
+        setRecentOrders([]);
+        return;
+      }
       const data = (await response.json()) as Array<{
         id: string;
         total: number;
@@ -106,7 +125,7 @@ export default function AdminDashboard() {
       }>;
 
       setRecentOrders(
-        (data ?? [])
+        (Array.isArray(data) ? data : [])
           .slice(0, 4)
           .map((order) => ({
             id: order.id,
@@ -244,7 +263,7 @@ export default function AdminDashboard() {
     } catch {
       // ignore and continue to redirect
     }
-    router.push("/");
+    router.replace("/admin/login");
   };
 
   const formatMoney = (amount: number) => {

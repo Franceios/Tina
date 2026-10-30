@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isAdminAuthenticated } from "@/app/lib/auth";
 import { getProducts, persistProducts, type Product } from "@/app/lib/store";
 
 type ProductRouteContext = {
@@ -19,6 +20,10 @@ export async function GET(_request: Request, context: ProductRouteContext) {
 }
 
 export async function PUT(request: Request, context: ProductRouteContext) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await context.params;
   const body = (await request.json()) as Partial<Product>;
   const products = await getProducts();
@@ -56,6 +61,10 @@ export async function PUT(request: Request, context: ProductRouteContext) {
 }
 
 export async function DELETE(_request: Request, context: ProductRouteContext) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await context.params;
   const products = await getProducts();
   const filtered = products.filter((item) => item.id !== id);
